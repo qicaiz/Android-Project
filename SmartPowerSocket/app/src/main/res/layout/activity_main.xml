@@ -51,7 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_below="@id/btn_connect"
-        android:layout_marginTop="15dp"
+        android:layout_marginTop="65dp"
         android:gravity="center_vertical">
 
         <Button

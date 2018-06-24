@@ -81,15 +81,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
 
                 break;
+            //发送1打开继电器
             case R.id.btn_on:
                 if (mPrintStream != null) {
                     mPrintStream.print("1");
                     mPrintStream.flush();
                 }
                 break;
+            //发送0关闭继电器
             case R.id.btn_off:
                 if (mPrintStream != null) {
-                    mPrintStream.print("2");
+                    mPrintStream.print("0");
                     mPrintStream.flush();
                 }
                 break;

@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        //控件初始化
         mBtnConnect = (Button) findViewById(R.id.btn_connect);
         mEtIP = (EditText) findViewById(R.id.et_ip);
         mEtPort = (EditText) findViewById(R.id.et_port);
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnBlueOff = (Button) findViewById(R.id.btn_blue_off);
         mBtnShowTemperature = (Button) findViewById(R.id.btn_show_temperature);
         mTvTemperature = (TextView) findViewById(R.id.txt_temperature);
+        //绑定点击回调事件
         mBtnConnect.setOnClickListener(this);
         mBtnRedOn.setOnClickListener(this);
         mBtnRedOff.setOnClickListener(this);
@@ -73,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnBlueOn.setOnClickListener(this);
         mBtnBlueOff.setOnClickListener(this);
         mBtnShowTemperature.setOnClickListener(this);
+        //开启温度显示线程
         new ShowTemperatureThread().start();
     }
 
@@ -87,7 +90,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mConnectThread = new ConnectThread(ip, port);
                     mConnectThread.start();
                 }
+                //断开连接并停止温度数据请求
                 if (mSocket != null && mSocket.isConnected()) {
+                    if(mPrintStream!=null){
+                        mPrintStream.print("8");
+                        mPrintStream.flush();
+                    }
                     try {
                         mSocket.close();
                         mBtnConnect.setText("连接");
@@ -95,88 +103,58 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         e.printStackTrace();
                     }
                 }
-
                 break;
+            //打开红灯
             case R.id.btn_red_on:
                 if (mPrintStream != null) {
                     mPrintStream.print("1");
                     mPrintStream.flush();
                 }
                 break;
+            //关闭红灯
             case R.id.btn_red_off:
                 if (mPrintStream != null) {
                     mPrintStream.print("2");
                     mPrintStream.flush();
                 }
                 break;
+            //打开黄灯
             case R.id.btn_yellow_on:
                 if (mPrintStream != null) {
                     mPrintStream.print("3");
                     mPrintStream.flush();
                 }
                 break;
+            //关闭黄灯
             case R.id.btn_yellow_off:
                 if (mPrintStream != null) {
                     mPrintStream.print("4");
                     mPrintStream.flush();
                 }
                 break;
+            //打开蓝灯
             case R.id.btn_blue_on:
                 if (mPrintStream != null) {
                     mPrintStream.print("5");
                     mPrintStream.flush();
                 }
                 break;
+            //关闭蓝灯
             case R.id.btn_blue_off:
                 if (mPrintStream != null) {
                     mPrintStream.print("6");
                     mPrintStream.flush();
                 }
                 break;
+            //显示温度，每次断开重连后都要点击该按钮
             case R.id.btn_show_temperature:
-
                 if(mPrintStream!=null){
-                    new RequestTemperatureThread().start();
+                    mPrintStream.print("7");
+                    mPrintStream.flush();
                 }
                 break;
         }
     }
-
-    private Socket tempSocket;
-    private PrintStream ps2;
-    /***
-     * 连接线程：负责与ESP8266 WiFi进行连接
-     */
-    private class TempConnectThread extends Thread {
-        private String ip;
-        private int port;
-
-        public TempConnectThread(String ip, int port) {
-            this.ip = ip;
-            this.port = port;
-        }
-
-        @Override
-        public void run() {
-            try {
-                tempSocket = new Socket(ip,port);
-                ps2 = new PrintStream(tempSocket.getOutputStream());
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "温度连接失败", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        }
-    }
-
-
-
 
     /***
      * 连接线程：负责与ESP8266 WiFi进行连接
@@ -195,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try {
                 mSocket = new Socket(ip,port);
                 mPrintStream = new PrintStream(mSocket.getOutputStream());
-
+                //更新UI
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -214,52 +192,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private class RequestTemperatureThread extends Thread{
-        @Override
-        public void run() {
-            while(true){
-                try {
-                    Thread.sleep(2000);
-                    mPrintStream.print("7");
-                    mPrintStream.flush();
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private String result;
+    /**
+     * 接收温度数据的线程
+     */
     private class ShowTemperatureThread extends Thread{
         private ServerSocket serverSocket;
         private DataInputStream in;
-        private byte[] receice;
+        private byte[] receive;
         private Socket client;
         @Override
         public void run() {
             try {
                 serverSocket = new ServerSocket(5000);
                 client = serverSocket.accept();
-                Log.i("mytest", "run: before while");
                 while (true){
-                    Log.i("mytest", "run: on while");
-
+                    //读取温度
                     in = new DataInputStream(client.getInputStream());
-                    receice = new byte[4];
-                    in.read(receice);
-                    final String temp=new String(receice);
-                    Log.i("mytest", "run: on while temp="+temp);
-
+                    receive = new byte[4];
+                    in.read(receive);
+                    //格式化温度
+                    final double temp = Double.valueOf(new String(receive))/100;
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            mTvTemperature.setText(temp);
+                            mTvTemperature.setText(temp+"℃");
                         }
                     });
                 }
             } catch (IOException e) {
-                Log.i("mytest", "run: exception");
                 e.printStackTrace();
             }
         }

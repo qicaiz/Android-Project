@@ -2,13 +2,21 @@ package com.qicaiz.wifiledtemperature;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
@@ -35,7 +43,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mBtnBlueOn;
     /**蓝色LED灯关按钮*/
     private Button mBtnBlueOff;
-    private PrintStream out;
+    /**显示温度按钮*/
+    private Button mBtnShowTemperature;
+    /**显示温度文本*/
+    private TextView mTvTemperature;
+    /**输出流*/
+    private PrintStream mPrintStream;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +63,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnYellowOff = (Button) findViewById(R.id.btn_yellow_off);
         mBtnBlueOn = (Button) findViewById(R.id.btn_blue_on);
         mBtnBlueOff = (Button) findViewById(R.id.btn_blue_off);
+        mBtnShowTemperature = (Button) findViewById(R.id.btn_show_temperature);
+        mTvTemperature = (TextView) findViewById(R.id.txt_temperature);
         mBtnConnect.setOnClickListener(this);
         mBtnRedOn.setOnClickListener(this);
         mBtnRedOff.setOnClickListener(this);
@@ -57,7 +72,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnYellowOff.setOnClickListener(this);
         mBtnBlueOn.setOnClickListener(this);
         mBtnBlueOff.setOnClickListener(this);
-
+        mBtnShowTemperature.setOnClickListener(this);
+        new ShowTemperatureThread().start();
     }
 
     @Override
@@ -82,44 +98,89 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 break;
             case R.id.btn_red_on:
-                if (out != null) {
-                    out.print("1");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("1");
+                    mPrintStream.flush();
                 }
                 break;
             case R.id.btn_red_off:
-                if (out != null) {
-                    out.print("2");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("2");
+                    mPrintStream.flush();
                 }
                 break;
             case R.id.btn_yellow_on:
-                if (out != null) {
-                    out.print("3");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("3");
+                    mPrintStream.flush();
                 }
                 break;
             case R.id.btn_yellow_off:
-                if (out != null) {
-                    out.print("4");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("4");
+                    mPrintStream.flush();
                 }
                 break;
             case R.id.btn_blue_on:
-                if (out != null) {
-                    out.print("5");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("5");
+                    mPrintStream.flush();
                 }
                 break;
             case R.id.btn_blue_off:
-                if (out != null) {
-                    out.print("6");
-                    out.flush();
+                if (mPrintStream != null) {
+                    mPrintStream.print("6");
+                    mPrintStream.flush();
+                }
+                break;
+            case R.id.btn_show_temperature:
+
+                if(mPrintStream!=null){
+                    new RequestTemperatureThread().start();
                 }
                 break;
         }
     }
 
+    private Socket tempSocket;
+    private PrintStream ps2;
+    /***
+     * 连接线程：负责与ESP8266 WiFi进行连接
+     */
+    private class TempConnectThread extends Thread {
+        private String ip;
+        private int port;
+
+        public TempConnectThread(String ip, int port) {
+            this.ip = ip;
+            this.port = port;
+        }
+
+        @Override
+        public void run() {
+            try {
+                tempSocket = new Socket(ip,port);
+                ps2 = new PrintStream(tempSocket.getOutputStream());
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, "温度连接失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        }
+    }
+
+
+
+
+    /***
+     * 连接线程：负责与ESP8266 WiFi进行连接
+     */
     private class ConnectThread extends Thread {
         private String ip;
         private int port;
@@ -132,8 +193,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void run() {
             try {
-                mSocket = new Socket(ip, port);
-                out = new PrintStream(mSocket.getOutputStream());
+                mSocket = new Socket(ip,port);
+                mPrintStream = new PrintStream(mSocket.getOutputStream());
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -152,5 +214,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private class RequestTemperatureThread extends Thread{
+        @Override
+        public void run() {
+            while(true){
+                try {
+                    Thread.sleep(2000);
+                    mPrintStream.print("7");
+                    mPrintStream.flush();
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private String result;
+    private class ShowTemperatureThread extends Thread{
+        private ServerSocket serverSocket;
+        private DataInputStream in;
+        private byte[] receice;
+        private Socket client;
+        @Override
+        public void run() {
+            try {
+                serverSocket = new ServerSocket(5000);
+                client = serverSocket.accept();
+                Log.i("mytest", "run: before while");
+                while (true){
+                    Log.i("mytest", "run: on while");
+
+                    in = new DataInputStream(client.getInputStream());
+                    receice = new byte[4];
+                    in.read(receice);
+                    final String temp=new String(receice);
+                    Log.i("mytest", "run: on while temp="+temp);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mTvTemperature.setText(temp);
+                        }
+                    });
+                }
+            } catch (IOException e) {
+                Log.i("mytest", "run: exception");
+                e.printStackTrace();
+            }
+        }
+    }
 
 }

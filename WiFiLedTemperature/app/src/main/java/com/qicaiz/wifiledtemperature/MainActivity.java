@@ -238,8 +238,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void run() {
             try {
+                //在手机端建立一个ServerSocket，负责获取温度数据，端口为5000
                 serverSocket = new ServerSocket(5000);
-
                 client = serverSocket.accept();
                 while (true) {
                     //读取温度
@@ -261,6 +261,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /**
+     * 心跳线程，每隔10s向esp8266发送一个字符，保持连接
+     */
     private class HeartBeatThread extends Thread {
         @Override
         public void run() {
@@ -282,7 +285,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        //按返回键时 停止数据请求，关闭socket连接
+        //按返回键时 停止数据请求，关闭所有socket连接
         if (mSocket != null && mSocket.isConnected()) {
             if (mPrintStream != null) {
                 mPrintStream.print("8");

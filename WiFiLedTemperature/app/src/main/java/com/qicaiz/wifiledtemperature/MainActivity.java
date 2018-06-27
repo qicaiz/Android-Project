@@ -1,54 +1,82 @@
 package com.qicaiz.wifiledtemperature;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    /**TCP连接线程*/
+    /**
+     * TCP连接线程
+     */
     private ConnectThread mConnectThread;
-    /**Socket套接字*/
+    /**
+     * Socket套接字
+     */
     private Socket mSocket;
-    /**服务器IP*/
+    /**
+     * 服务器IP
+     */
     private EditText mEtIP;
-    /**服务器端口*/
+    /**
+     * 服务器端口
+     */
     private EditText mEtPort;
-    /**连接按钮*/
+    /**
+     * 连接按钮
+     */
     private Button mBtnConnect;
-    /**红色LED灯开按钮*/
+    /**
+     * 红色LED灯开按钮
+     */
     private Button mBtnRedOn;
-    /**红色LED灯关按钮*/
+    /**
+     * 红色LED灯关按钮
+     */
     private Button mBtnRedOff;
-    /**黄色LED灯开按钮*/
+    /**
+     * 黄色LED灯开按钮
+     */
     private Button mBtnYellowOn;
-    /**黄色LED灯关按钮*/
+    /**
+     * 黄色LED灯关按钮
+     */
     private Button mBtnYellowOff;
-    /**蓝色LED灯开按钮*/
+    /**
+     * 蓝色LED灯开按钮
+     */
     private Button mBtnBlueOn;
-    /**蓝色LED灯关按钮*/
+    /**
+     * 蓝色LED灯关按钮
+     */
     private Button mBtnBlueOff;
-    /**显示温度按钮*/
+    /**
+     * 显示温度按钮
+     */
     private Button mBtnShowTemperature;
-    /**显示温度文本*/
+    /**
+     * 显示温度文本
+     */
     private TextView mTvTemperature;
-    /**输出流*/
+    /**
+     * 输出流
+     */
     private PrintStream mPrintStream;
+
+    /**
+     * 心跳线程
+     */
+    private HeartBeatThread mHeartBeatThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 //断开连接并停止温度数据请求
                 if (mSocket != null && mSocket.isConnected()) {
-                    if(mPrintStream!=null){
+                    if (mPrintStream != null) {
                         mPrintStream.print("8");
                         mPrintStream.flush();
                     }
@@ -148,7 +176,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             //显示温度，每次断开重连后都要点击该按钮
             case R.id.btn_show_temperature:
-                if(mPrintStream!=null){
+                if (mPrintStream != null) {
                     mPrintStream.print("7");
                     mPrintStream.flush();
                 }
@@ -171,7 +199,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void run() {
             try {
-                mSocket = new Socket(ip,port);
+                //建立网络socket，esp8266默认IP： 192.168.4.1 端口：333
+                mSocket = new Socket(ip, port);
                 mPrintStream = new PrintStream(mSocket.getOutputStream());
                 //更新UI
                 runOnUiThread(new Runnable() {
@@ -180,6 +209,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         mBtnConnect.setText("断开");
                     }
                 });
+                //启动心跳线程，维持Socket连接
+                if (mHeartBeatThread == null) {
+                    mHeartBeatThread = new HeartBeatThread();
+                    mHeartBeatThread.start();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 runOnUiThread(new Runnable() {
@@ -195,27 +229,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 接收温度数据的线程
      */
-    private class ShowTemperatureThread extends Thread{
-        private ServerSocket serverSocket;
+    private ServerSocket serverSocket;
+    private Socket client;
+    private class ShowTemperatureThread extends Thread {
         private DataInputStream in;
         private byte[] receive;
-        private Socket client;
+
         @Override
         public void run() {
             try {
                 serverSocket = new ServerSocket(5000);
+
                 client = serverSocket.accept();
-                while (true){
+                while (true) {
                     //读取温度
                     in = new DataInputStream(client.getInputStream());
                     receive = new byte[4];
                     in.read(receive);
                     //格式化温度
-                    final double temp = Double.valueOf(new String(receive))/100;
+                    final double temp = Double.valueOf(new String(receive)) / 100;
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            mTvTemperature.setText(temp+"℃");
+                            mTvTemperature.setText(temp + "℃");
                         }
                     });
                 }
@@ -225,4 +261,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private class HeartBeatThread extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(10 * 1000);
+                    if (mPrintStream != null) {
+                        mPrintStream.print("x");
+                        mPrintStream.flush();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        //按返回键时 停止数据请求，关闭socket连接
+        if (mSocket != null && mSocket.isConnected()) {
+            if (mPrintStream != null) {
+                mPrintStream.print("8");
+                mPrintStream.flush();
+            }
+            try {
+                mSocket.close();
+                mBtnConnect.setText("连接");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if(serverSocket!=null){
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if(client!=null){
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //退出应用
+        finish();
+    }
 }

@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //断开连接并停止温度数据请求
                 if (mSocket != null && mSocket.isConnected()) {
                     if (mPrintStream != null) {
-                        mPrintStream.print("8");
+                        mPrintStream.print("s");
                         mPrintStream.flush();
                     }
                     try {
@@ -135,49 +135,49 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //打开红灯
             case R.id.btn_red_on:
                 if (mPrintStream != null) {
-                    mPrintStream.print("1");
+                    mPrintStream.print("3");
                     mPrintStream.flush();
                 }
                 break;
             //关闭红灯
             case R.id.btn_red_off:
                 if (mPrintStream != null) {
-                    mPrintStream.print("2");
+                    mPrintStream.print("4");
                     mPrintStream.flush();
                 }
                 break;
             //打开黄灯
             case R.id.btn_yellow_on:
                 if (mPrintStream != null) {
-                    mPrintStream.print("3");
+                    mPrintStream.print("5");
                     mPrintStream.flush();
                 }
                 break;
             //关闭黄灯
             case R.id.btn_yellow_off:
                 if (mPrintStream != null) {
-                    mPrintStream.print("4");
+                    mPrintStream.print("6");
                     mPrintStream.flush();
                 }
                 break;
             //打开蓝灯
             case R.id.btn_blue_on:
                 if (mPrintStream != null) {
-                    mPrintStream.print("5");
+                    mPrintStream.print("7");
                     mPrintStream.flush();
                 }
                 break;
             //关闭蓝灯
             case R.id.btn_blue_off:
                 if (mPrintStream != null) {
-                    mPrintStream.print("6");
+                    mPrintStream.print("8");
                     mPrintStream.flush();
                 }
                 break;
             //显示温度，每次断开重连后都要点击该按钮
             case R.id.btn_show_temperature:
                 if (mPrintStream != null) {
-                    mPrintStream.print("7");
+                    mPrintStream.print("t");
                     mPrintStream.flush();
                 }
                 break;
@@ -246,14 +246,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     in = new DataInputStream(client.getInputStream());
                     receive = new byte[4];
                     in.read(receive);
-                    //格式化温度
-                    final double temp = Double.valueOf(new String(receive)) / 100;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mTvTemperature.setText(temp + "℃");
-                        }
-                    });
+                    //格式化温度并捕获异常
+                    try{
+                        final double temp = Double.valueOf(new String(receive)) / 100;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mTvTemperature.setText(temp + "℃");
+                            }
+                        });
+                    } catch (NumberFormatException e){
+                        e.printStackTrace();
+                    }
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -288,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //按返回键时 停止数据请求，关闭所有socket连接
         if (mSocket != null && mSocket.isConnected()) {
             if (mPrintStream != null) {
-                mPrintStream.print("8");
+                mPrintStream.print("s");
                 mPrintStream.flush();
             }
             try {

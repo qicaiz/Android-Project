@@ -82,19 +82,19 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 温度上限
      */
-    private String mTempHigh;
+    private String mTempHigh="32";
     /**
      * 温度下限
      */
-    private String mTempLow;
+    private String mTempLow="18";
     /**
      * 湿度上限
      */
-    private String mHumidityHigh;
+    private String mHumidityHigh="92";
     /**
      * 湿度下限
      */
-    private String mHumidityLow;
+    private String mHumidityLow="70";
     /**
      * 温度显示控件
      */
@@ -103,7 +103,14 @@ public class MainActivity extends AppCompatActivity {
      * 湿度显示控件
      */
     private TextView mHumidityTv;
-
+    /**
+     * 温度告警控件
+     */
+    private TextView mTemperatureAlert;
+    /**
+     * 湿度告警控件
+     */
+    private TextView mHumidityAlert;
     int xIndex = 8;
     private Handler mHandler = new Handler() {
         @Override
@@ -124,8 +131,33 @@ public class MainActivity extends AppCompatActivity {
 
                     int temperature = Character.digit(temperatureTemp.charAt(0), 16) * 16
                             + Character.digit(temperatureTemp.charAt(1), 16);
+                    Log.i("temperature", "temperature: " + temperature);
                     mTemperatureTv.setText(temperature + "℃");
                     mHumidityTv.setText(humidity + "%");
+                    //判断温度是否超出告警阈值
+                    Log.i("temperature", "temperature alert: " + Integer.valueOf(mTempHigh));
+                    Log.i("temperature", "humidity alert: " + Integer.valueOf(mHumidityHigh));
+                    if(temperature>Integer.valueOf(mTempHigh)){
+                        mTemperatureAlert.setText("温度过高");
+                        mTemperatureAlert.setTextColor(Color.RED);
+                    } else if(temperature<Integer.valueOf(mTempLow)){
+                        mTemperatureAlert.setText("温度偏低");
+                        mTemperatureAlert.setTextColor(Color.RED);
+                    } else {
+                        mTemperatureAlert.setText("温度正常");
+                        mTemperatureAlert.setTextColor(Color.GREEN);
+                    }
+                    //判断湿度是否超出告警阈值
+                    if(humidity>Integer.valueOf(mHumidityHigh)){
+                        mHumidityAlert.setText("湿度过高");
+                        mHumidityAlert.setTextColor(Color.RED);
+                    } else if(humidity<Integer.valueOf(mHumidityLow)){
+                        mHumidityAlert.setText("湿度偏低");
+                        mHumidityAlert.setTextColor(Color.RED);
+                    } else {
+                        mHumidityAlert.setText("湿度正常");
+                        mHumidityAlert.setTextColor(Color.GREEN);
+                    }
                     int entryCount = mTemperatureDataSet.getEntryCount();
                     if (entryCount < 8) {
                         ++entryCount;
@@ -145,38 +177,6 @@ public class MainActivity extends AppCompatActivity {
                     mLineChart.notifyDataSetChanged();
                     mLineChart.invalidate();
                     break;
-//                    float temperature;
-//                    try {
-//                        temperature = Float.valueOf(data) / 100;
-//                    } catch (NumberFormatException e) {
-//                        break;
-//                    }
-//                    Log.i(TAG, "handleMessage: temperature=" + temperature);
-//                    //如果温度值超过默认Y坐标最大值，reset最大值
-//                    if (temperature > AXIS_MAX) {
-//                        YAxis yAxisLeft = mLineChart.getAxisLeft();
-//                        yAxisLeft.resetAxisMaximum();
-//                    }
-//                    //如果温度值小于默认Y坐标最小值，reset最小值
-//                    if (temperature < AXIS_MIN) {
-//                        YAxis yAxisLeft = mLineChart.getAxisLeft();
-//                        yAxisLeft.resetAxisMinimum();
-//                    }
-//                    //构造方法的字符格式这里如果小数不足2位,会以0补足
-//                    DecimalFormat decimalFormat = new DecimalFormat(".00");
-//                    String temperatureStr = decimalFormat.format(temperature);
-//                    mTvTemperature.setText(temperatureStr + " ℃");
-//                    int entryCount = mLineDataSet.getEntryCount();
-//                    if (entryCount < 8) {
-//                        mLineDataSet.addEntry(new Entry(++entryCount, temperature));
-//                    } else {
-//                        mLineDataSet.addEntry(new Entry(++xIndex, temperature));
-//                        mLineDataSet.removeFirst();
-//                    }
-//                    mLineData.notifyDataChanged();
-//                    mLineChart.notifyDataSetChanged();
-//                    mLineChart.invalidate();
-//                    break;
                 default:
 
             }
@@ -243,6 +243,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mTemperatureTv = (TextView) findViewById(R.id.tv_temperature);
         mHumidityTv = (TextView) findViewById(R.id.tv_humidity);
+        mTemperatureAlert= (TextView) findViewById(R.id.tv_temperature_alert);
+        mHumidityAlert= (TextView) findViewById(R.id.tv_humidity_alert);
         mLineChart = (LineChart) findViewById(R.id.chart);
         //初始化图表属性
         initChart();
@@ -423,7 +425,12 @@ public class MainActivity extends AppCompatActivity {
                 startDiscoveryDevice();
                 return true;
             case R.id.alert_settings:
-                startActivityForResult(new Intent(MainActivity.this, AlertSettingActivity.class), ACTIVITY_REQUEST_CODE);
+                Intent intent = new Intent(MainActivity.this,AlertSettingActivity.class);
+                intent.putExtra("tempHighSetting",mTempHigh);
+                intent.putExtra("tempLowSetting",mTempLow);
+                intent.putExtra("humidityHighSetting",mHumidityHigh);
+                intent.putExtra("humidityLowSetting",mHumidityLow);
+                startActivityForResult(intent, ACTIVITY_REQUEST_CODE);
                 break;
             case R.id.disconnect:
                 if (mSocket != null) {

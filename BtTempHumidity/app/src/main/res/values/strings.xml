@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">蓝牙温湿度显示设计</string>
-    <string name="title_activity_alert_setting">AlertSettingActivity</string>
+    <string name="title_activity_alert_setting">告警设置</string>
 </resources>

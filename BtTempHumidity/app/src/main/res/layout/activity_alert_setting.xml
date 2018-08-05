@@ -23,9 +23,7 @@
         android:layout_height="wrap_content"
         android:layout_toRightOf="@id/tv_temperature_high"
         android:gravity="center"
-        android:hint="46"
         android:textColor="#FFFFFF"
-        android:textColorHint="#999999"
         android:textSize="27sp" />
 
     <TextView
@@ -45,9 +43,7 @@
         android:layout_below="@+id/et_temp_high"
         android:layout_toRightOf="@id/tv_temperature_low"
         android:gravity="center"
-        android:hint="18"
         android:textColor="#FFFFFF"
-        android:textColorHint="#999999"
         android:textSize="27sp" />
 
 
@@ -68,9 +64,7 @@
         android:layout_below="@+id/et_temp_low"
         android:layout_toRightOf="@id/tv_humidity_high"
         android:gravity="center"
-        android:hint="18"
         android:textColor="#FFFFFF"
-        android:textColorHint="#999999"
         android:textSize="27sp" />
 
 
@@ -91,9 +85,7 @@
         android:layout_below="@+id/et_humidity_high"
         android:layout_toRightOf="@id/tv_humidity_low"
         android:gravity="center"
-        android:hint="18"
         android:textColor="#FFFFFF"
-        android:textColorHint="#999999"
         android:textSize="27sp" />
 
     <RelativeLayout

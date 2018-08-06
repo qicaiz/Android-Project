@@ -11,8 +11,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import org.w3c.dom.Text;
-
 public class AlertSettingActivity extends AppCompatActivity implements View.OnClickListener {
 
     /**
@@ -44,21 +42,24 @@ public class AlertSettingActivity extends AppCompatActivity implements View.OnCl
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alert_setting);
+        //显示返回按钮
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+        //获取从MainActivity传递过来的告警值，用于显示
         Intent intent = getIntent();
         String tempHigh = "";
         String tempLow = "";
         String humidityHigh = "";
         String humidityLow = "";
         if (intent != null) {
-            tempHigh = intent.getStringExtra("tempHighSetting");
-            tempLow = intent.getStringExtra("tempLowSetting");
-            humidityHigh = intent.getStringExtra("humidityHighSetting");
-            humidityLow = intent.getStringExtra("humidityLowSetting");
+            tempHigh = intent.getStringExtra(Constants.TEMP_HIGH_SETTING);
+            tempLow = intent.getStringExtra(Constants.TEMP_LOW_SETTING);
+            humidityHigh = intent.getStringExtra(Constants.HUMIDITY_HIGH_SETTING);
+            humidityLow = intent.getStringExtra(Constants.HUMIDITY_LOW_SETTING);
         }
+        //控件初始化
         mCancelBtn = (Button) findViewById(R.id.btn_cancel);
         mSaveBtn = (Button) findViewById(R.id.btn_save);
         mTempHigh = (EditText) findViewById(R.id.et_temp_high);
@@ -77,28 +78,30 @@ public class AlertSettingActivity extends AppCompatActivity implements View.OnCl
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
+            //取消按钮
             case R.id.btn_cancel:
                 setResult(RESULT_CANCELED);
                 finish();
                 break;
+            //保存按钮
             case R.id.btn_save:
                 Intent settingIntent = new Intent();
                 String tempHigh = mTempHigh.getText().toString();
                 String tempLow = mTempLow.getText().toString();
                 String humidityHigh = mHumidityHigh.getText().toString();
                 String humidityLow = mHumidityLow.getText().toString();
+                //数值设置合规判断
                 if (TextUtils.isEmpty(tempHigh) || TextUtils.isEmpty(tempLow)
                         || TextUtils.isEmpty(humidityHigh) || TextUtils.isEmpty(humidityLow)) {
                     Toast.makeText(AlertSettingActivity.this, "告警数值不能为空", Toast.LENGTH_SHORT).show();
                 } else {
-                    settingIntent.putExtra("tempHighSetting", tempHigh);
-                    settingIntent.putExtra("tempLowSetting", tempLow);
-                    settingIntent.putExtra("humidityHighSetting", humidityHigh);
-                    settingIntent.putExtra("humidityLowSetting", humidityLow);
+                    settingIntent.putExtra(Constants.TEMP_HIGH_SETTING, tempHigh);
+                    settingIntent.putExtra(Constants.TEMP_LOW_SETTING, tempLow);
+                    settingIntent.putExtra(Constants.HUMIDITY_HIGH_SETTING, humidityHigh);
+                    settingIntent.putExtra(Constants.HUMIDITY_LOW_SETTING, humidityLow);
                     setResult(RESULT_OK, settingIntent);
                     finish();
                 }
-
                 break;
         }
     }

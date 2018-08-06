@@ -1,7 +1,7 @@
 package daxiniot.bttemphumidity;
 
 /**
- * Created by qicaiz on 3/18/2018.
+ * 蓝牙设备JavaBean
  */
 
 public class MyDevice {

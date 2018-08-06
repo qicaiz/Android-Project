@@ -82,19 +82,19 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 温度上限
      */
-    private String mTempHigh="32";
+    private String mTempHigh = "32";
     /**
      * 温度下限
      */
-    private String mTempLow="18";
+    private String mTempLow = "18";
     /**
      * 湿度上限
      */
-    private String mHumidityHigh="92";
+    private String mHumidityHigh = "92";
     /**
      * 湿度下限
      */
-    private String mHumidityLow="70";
+    private String mHumidityLow = "70";
     /**
      * 温度显示控件
      */
@@ -111,6 +111,15 @@ public class MainActivity extends AppCompatActivity {
      * 湿度告警控件
      */
     private TextView mHumidityAlert;
+    /**
+     * 温度告警范围
+     */
+    private TextView mTemperatureRangeTv;
+    /**
+     * 湿度告警范围
+     */
+    private TextView getmHumidityRangeTv;
+
     int xIndex = 8;
     private Handler mHandler = new Handler() {
         @Override
@@ -137,10 +146,10 @@ public class MainActivity extends AppCompatActivity {
                     //判断温度是否超出告警阈值
                     Log.i("temperature", "temperature alert: " + Integer.valueOf(mTempHigh));
                     Log.i("temperature", "humidity alert: " + Integer.valueOf(mHumidityHigh));
-                    if(temperature>Integer.valueOf(mTempHigh)){
+                    if (temperature > Integer.valueOf(mTempHigh)) {
                         mTemperatureAlert.setText("温度过高");
                         mTemperatureAlert.setTextColor(Color.RED);
-                    } else if(temperature<Integer.valueOf(mTempLow)){
+                    } else if (temperature < Integer.valueOf(mTempLow)) {
                         mTemperatureAlert.setText("温度偏低");
                         mTemperatureAlert.setTextColor(Color.RED);
                     } else {
@@ -148,10 +157,10 @@ public class MainActivity extends AppCompatActivity {
                         mTemperatureAlert.setTextColor(Color.GREEN);
                     }
                     //判断湿度是否超出告警阈值
-                    if(humidity>Integer.valueOf(mHumidityHigh)){
+                    if (humidity > Integer.valueOf(mHumidityHigh)) {
                         mHumidityAlert.setText("湿度过高");
                         mHumidityAlert.setTextColor(Color.RED);
-                    } else if(humidity<Integer.valueOf(mHumidityLow)){
+                    } else if (humidity < Integer.valueOf(mHumidityLow)) {
                         mHumidityAlert.setText("湿度偏低");
                         mHumidityAlert.setTextColor(Color.RED);
                     } else {
@@ -161,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
                     int entryCount = mTemperatureDataSet.getEntryCount();
                     if (entryCount < 8) {
                         ++entryCount;
-                        int tempEntryCount=entryCount;
+                        int tempEntryCount = entryCount;
                         mTemperatureDataSet.addEntry(new Entry(tempEntryCount, temperature));
                         mHumidityDataSet.addEntry(new Entry(tempEntryCount, humidity));
                     } else {
@@ -243,8 +252,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mTemperatureTv = (TextView) findViewById(R.id.tv_temperature);
         mHumidityTv = (TextView) findViewById(R.id.tv_humidity);
-        mTemperatureAlert= (TextView) findViewById(R.id.tv_temperature_alert);
-        mHumidityAlert= (TextView) findViewById(R.id.tv_humidity_alert);
+        mTemperatureAlert = (TextView) findViewById(R.id.tv_temperature_alert);
+        mHumidityAlert = (TextView) findViewById(R.id.tv_humidity_alert);
+        mTemperatureRangeTv = (TextView) findViewById(R.id.tv_temperature_range);
+        getmHumidityRangeTv = (TextView) findViewById(R.id.tv_humidity_range);
+        mTemperatureRangeTv.setText("("+mTempLow+" - "+mTempHigh+"℃)");
+        getmHumidityRangeTv.setText("("+mHumidityLow+" - "+mHumidityHigh+"%)");
         mLineChart = (LineChart) findViewById(R.id.chart);
         //初始化图表属性
         initChart();
@@ -345,14 +358,14 @@ public class MainActivity extends AppCompatActivity {
         // 温度数据
         float[] datas1 = {0, 1, 3, 7, 5, 3, 8, 5};
         ArrayList<Entry> temperatureList = new ArrayList<Entry>();
-        temperatureList.add(new Entry(0,0));
+        temperatureList.add(new Entry(0, 0));
 //        for (int i = 0; i < count; i++) {
 //            temperatureList.add(new Entry(i, datas1[i]));
 //        }
         // y轴的数据
         float[] datas2 = {0, 10, 30, 70, 50, 30, 80, 50};
         ArrayList<Entry> humidityList = new ArrayList<Entry>();
-        humidityList.add(new Entry(0,0));
+        humidityList.add(new Entry(0, 0));
 //        for (int i = 0; i < count; i++) {
 //            humidityList.add(new Entry(i, datas2[i]));
 //        }
@@ -425,11 +438,11 @@ public class MainActivity extends AppCompatActivity {
                 startDiscoveryDevice();
                 return true;
             case R.id.alert_settings:
-                Intent intent = new Intent(MainActivity.this,AlertSettingActivity.class);
-                intent.putExtra("tempHighSetting",mTempHigh);
-                intent.putExtra("tempLowSetting",mTempLow);
-                intent.putExtra("humidityHighSetting",mHumidityHigh);
-                intent.putExtra("humidityLowSetting",mHumidityLow);
+                Intent intent = new Intent(MainActivity.this, AlertSettingActivity.class);
+                intent.putExtra("tempHighSetting", mTempHigh);
+                intent.putExtra("tempLowSetting", mTempLow);
+                intent.putExtra("humidityHighSetting", mHumidityHigh);
+                intent.putExtra("humidityLowSetting", mHumidityLow);
                 startActivityForResult(intent, ACTIVITY_REQUEST_CODE);
                 break;
             case R.id.disconnect:
@@ -455,6 +468,8 @@ public class MainActivity extends AppCompatActivity {
             mTempLow = data.getStringExtra("tempLowSetting");
             mHumidityHigh = data.getStringExtra("humidityHighSetting");
             mHumidityLow = data.getStringExtra("humidityLowSetting");
+            mTemperatureRangeTv.setText("("+mTempLow+" - "+mTempHigh+"℃)");
+            getmHumidityRangeTv.setText("("+mHumidityLow+" - "+mHumidityHigh+"%)");
         }
     }
 
@@ -486,7 +501,7 @@ public class MainActivity extends AppCompatActivity {
                 mExitTime = System.currentTimeMillis();
             } else {
                 //关闭蓝牙socket
-                if(mSocket!=null){
+                if (mSocket != null) {
                     try {
                         mSocket.close();
                     } catch (IOException e) {

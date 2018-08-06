@@ -4,10 +4,14 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 public class AlertSettingActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -41,19 +45,19 @@ public class AlertSettingActivity extends AppCompatActivity implements View.OnCl
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alert_setting);
         ActionBar actionBar = getSupportActionBar();
-        if(actionBar!=null){
+        if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
         Intent intent = getIntent();
-        String tempHigh="";
-        String tempLow="";
-        String humidityHigh="";
-        String humidityLow="";
-        if(intent!=null){
-            tempHigh=intent.getStringExtra("tempHighSetting");
-            tempLow=intent.getStringExtra("tempLowSetting");
-            humidityHigh=intent.getStringExtra("humidityHighSetting");
-            humidityLow=intent.getStringExtra("humidityLowSetting");
+        String tempHigh = "";
+        String tempLow = "";
+        String humidityHigh = "";
+        String humidityLow = "";
+        if (intent != null) {
+            tempHigh = intent.getStringExtra("tempHighSetting");
+            tempLow = intent.getStringExtra("tempLowSetting");
+            humidityHigh = intent.getStringExtra("humidityHighSetting");
+            humidityLow = intent.getStringExtra("humidityLowSetting");
         }
         mCancelBtn = (Button) findViewById(R.id.btn_cancel);
         mSaveBtn = (Button) findViewById(R.id.btn_save);
@@ -79,19 +83,29 @@ public class AlertSettingActivity extends AppCompatActivity implements View.OnCl
                 break;
             case R.id.btn_save:
                 Intent settingIntent = new Intent();
-                settingIntent.putExtra("tempHighSetting",mTempHigh.getText().toString());
-                settingIntent.putExtra("tempLowSetting",mTempLow.getText().toString());
-                settingIntent.putExtra("humidityHighSetting",mHumidityHigh.getText().toString());
-                settingIntent.putExtra("humidityLowSetting",mHumidityLow.getText().toString());
-                setResult(RESULT_OK, settingIntent);
-                finish();
+                String tempHigh = mTempHigh.getText().toString();
+                String tempLow = mTempLow.getText().toString();
+                String humidityHigh = mHumidityHigh.getText().toString();
+                String humidityLow = mHumidityLow.getText().toString();
+                if (TextUtils.isEmpty(tempHigh) || TextUtils.isEmpty(tempLow)
+                        || TextUtils.isEmpty(humidityHigh) || TextUtils.isEmpty(humidityLow)) {
+                    Toast.makeText(AlertSettingActivity.this, "告警数值不能为空", Toast.LENGTH_SHORT).show();
+                } else {
+                    settingIntent.putExtra("tempHighSetting", tempHigh);
+                    settingIntent.putExtra("tempLowSetting", tempLow);
+                    settingIntent.putExtra("humidityHighSetting", humidityHigh);
+                    settingIntent.putExtra("humidityLowSetting", humidityLow);
+                    setResult(RESULT_OK, settingIntent);
+                    finish();
+                }
+
                 break;
         }
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId()==android.R.id.home){
+        if (item.getItemId() == android.R.id.home) {
             setResult(RESULT_CANCELED);
             finish();
         }

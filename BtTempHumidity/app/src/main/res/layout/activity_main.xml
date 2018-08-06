@@ -48,6 +48,13 @@
                 android:text="温度正常"
                 android:textColor="#00FF00"
                 android:textSize="27sp" />
+            <TextView
+                android:id="@+id/tv_temperature_range"
+                android:layout_below="@id/tv_temperature_alert"
+                android:layout_centerHorizontal="true"
+                android:textColor="#FFFFFF"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
         </RelativeLayout>
 
         <View
@@ -91,6 +98,13 @@
                 android:text="湿度正常"
                 android:textColor="#00FF00"
                 android:textSize="27sp" />
+            <TextView
+                android:id="@+id/tv_humidity_range"
+                android:layout_below="@id/tv_humidity_alert"
+                android:layout_centerHorizontal="true"
+                android:textColor="#FFFFFF"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
 
         </RelativeLayout>
 

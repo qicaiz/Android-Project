@@ -3,8 +3,6 @@ package com.daxiniot.wifitemphumidity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,20 +23,16 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    private final static int ACTIVITY_REQUEST_CODE = 0x01;
+
     /**
      * 图表控件
      */
     private LineChart mLineChart;
+
     /**
      * 图表数据
      */
     private LineData mLineData;
-
-    /**
-     * 记录推退出时间
-     */
-    private long mExitTime = 0;
 
     /**
      * 温度上限
@@ -79,107 +73,52 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 湿度告警范围
      */
-    private TextView getmHumidityRangeTv;
-
+    private TextView mHumidityRangeTv;
+    /**
+     * 温度数据
+     */
     private LineDataSet mTemperatureDataSet;
+    /**
+     * 湿度数据
+     */
     private LineDataSet mHumidityDataSet;
-
+    /**
+     * 图表显示8个数据
+     */
     private int xIndex = 8;
-
-
-    private Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case 0x01:
-                    String data = (String) msg.obj;
-                    //将字符转换成16进制的字符串共5个字节 xx xx xx xx xx
-                    String hexData = str2HexStr(data);
-                    //湿度整数部分,第一个字节
-                    String humidityTemp = hexData.substring(0, 2);
-                    //温度整数部分，第三个字节
-                    String temperatureTemp = hexData.substring(4, 6);
-                    //将16进制转换成10进制
-                    int humidity = Character.digit(humidityTemp.charAt(0), 16) * 16
-                            + Character.digit(humidityTemp.charAt(1), 16);
-                    int temperature = Character.digit(temperatureTemp.charAt(0), 16) * 16
-                            + Character.digit(temperatureTemp.charAt(1), 16);
-                    mTemperatureTv.setText(temperature + "℃");
-                    mHumidityTv.setText(humidity + "%");
-                    //判断温度是否超出告警阈值
-                    if (temperature > Integer.valueOf(mTempHigh)) {
-                        mTemperatureAlert.setText("温度过高");
-                        mTemperatureAlert.setTextColor(Color.RED);
-                    } else if (temperature < Integer.valueOf(mTempLow)) {
-                        mTemperatureAlert.setText("温度偏低");
-                        mTemperatureAlert.setTextColor(Color.RED);
-                    } else {
-                        mTemperatureAlert.setText("温度正常");
-                        mTemperatureAlert.setTextColor(Color.GREEN);
-                    }
-                    //判断湿度是否超出告警阈值
-                    if (humidity > Integer.valueOf(mHumidityHigh)) {
-                        mHumidityAlert.setText("湿度过高");
-                        mHumidityAlert.setTextColor(Color.RED);
-                    } else if (humidity < Integer.valueOf(mHumidityLow)) {
-                        mHumidityAlert.setText("湿度偏低");
-                        mHumidityAlert.setTextColor(Color.RED);
-                    } else {
-                        mHumidityAlert.setText("湿度正常");
-                        mHumidityAlert.setTextColor(Color.GREEN);
-                    }
-                    //刷新图表
-                    int entryCount = mTemperatureDataSet.getEntryCount();
-                    if (entryCount < 8) {
-                        ++entryCount;
-                        int tempEntryCount = entryCount;
-                        mTemperatureDataSet.addEntry(new Entry(tempEntryCount, temperature));
-                        mHumidityDataSet.addEntry(new Entry(tempEntryCount, humidity));
-                    } else {
-                        ++xIndex;
-                        int tempIndex = xIndex;
-                        mTemperatureDataSet.addEntry(new Entry(tempIndex, temperature));
-                        mTemperatureDataSet.removeFirst();
-                        mHumidityDataSet.addEntry(new Entry(tempIndex, humidity));
-                        mHumidityDataSet.removeFirst();
-                    }
-                    mLineData.notifyDataChanged();
-                    mLineChart.notifyDataSetChanged();
-                    mLineChart.invalidate();
-                    break;
-                default:
-            }
-        }
-    };
-
+    /**
+     * 接收温度数据的ServerSocket
+     */
+    private ServerSocket serverSocket;
+    /**
+     * Socket客户端
+     */
+    private Socket client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //实例化控件
-        mTemperatureTv = (TextView) findViewById(R.id.tv_temperature);
-        mHumidityTv = (TextView) findViewById(R.id.tv_humidity);
-        mTemperatureAlert = (TextView) findViewById(R.id.tv_temperature_alert);
-        mHumidityAlert = (TextView) findViewById(R.id.tv_humidity_alert);
-        mTemperatureRangeTv = (TextView) findViewById(R.id.tv_temperature_range);
-        getmHumidityRangeTv = (TextView) findViewById(R.id.tv_humidity_range);
+        mTemperatureTv = findViewById(R.id.tv_temperature);
+        mHumidityTv = findViewById(R.id.tv_humidity);
+        mTemperatureAlert = findViewById(R.id.tv_temperature_alert);
+        mHumidityAlert = findViewById(R.id.tv_humidity_alert);
+        mTemperatureRangeTv = findViewById(R.id.tv_temperature_range);
+        mHumidityRangeTv = findViewById(R.id.tv_humidity_range);
         mTemperatureRangeTv.setText("(" + mTempLow + " - " + mTempHigh + "℃)");
-        getmHumidityRangeTv.setText("(" + mHumidityLow + " - " + mHumidityHigh + "%)");
-        mLineChart = (LineChart) findViewById(R.id.chart);
+        mHumidityRangeTv.setText("(" + mHumidityLow + " - " + mHumidityHigh + "%)");
+        mLineChart = findViewById(R.id.chart);
         //初始化图表属性
         initChart();
         //开启温度显示线程
-        new ShowTemperatureThread().start();
-
+        new ReceiveDataThread().start();
     }
 
     /**
      * 初始化图表属性
      */
     private void initChart() {
-        //图表不可拖拽
-        mLineChart.setDragEnabled(false);
         //设置X轴属性
         XAxis xAxis = mLineChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
@@ -189,15 +128,14 @@ public class MainActivity extends AppCompatActivity {
         yAxisLeft.setTextColor(Color.WHITE);
         YAxis yAxisRight = mLineChart.getAxisRight();
         yAxisRight.setTextColor(Color.WHITE);
-        //设置图表数据
+        //初始化温度数据
         ArrayList<Entry> temperatureList = new ArrayList<>();
         temperatureList.add(new Entry(0, 0));
-        // y轴的数据
+        //初始化湿度数据
         ArrayList<Entry> humidityList = new ArrayList<>();
         humidityList.add(new Entry(0, 0));
+        //设置温度曲线属性
         mTemperatureDataSet = new LineDataSet(temperatureList, "温度");
-        //dataSet.enableDashedLine(10f, 10f, 0f);//将折线设置为曲线(即设置为虚线)
-        //用y轴的集合来设置参数
         mTemperatureDataSet.setLineWidth(1.75f); // 线宽
         mTemperatureDataSet.setCircleRadius(2f);// 显示的圆形大小
         mTemperatureDataSet.setColor(Color.rgb(89, 194, 230));// 折线显示颜色
@@ -206,9 +144,8 @@ public class MainActivity extends AppCompatActivity {
         mTemperatureDataSet.setHighlightEnabled(true);
         mTemperatureDataSet.setValueTextColor(Color.rgb(89, 194, 230)); //数值显示的颜色
         mTemperatureDataSet.setValueTextSize(8f);     //数值显示的大小
-
+        //设置湿度曲线属性
         mHumidityDataSet = new LineDataSet(humidityList, "湿度");
-        //用y轴的集合来设置参数
         mHumidityDataSet.setLineWidth(1.75f);
         mHumidityDataSet.setCircleRadius(2f);
         mHumidityDataSet.setColor(Color.rgb(252, 76, 122));
@@ -217,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
         mHumidityDataSet.setHighlightEnabled(true);
         mHumidityDataSet.setValueTextColor(Color.rgb(252, 76, 122));
         mHumidityDataSet.setValueTextSize(8f);
-        //构建一个类型为LineDataSet的ArrayList 用来存放所有 y的LineDataSet   他是构建最终加入LineChart数据集所需要的参数
+        //构建一个类型为LineDataSet的ArrayList 用来存放所有 y的LineDataSet
         ArrayList<ILineDataSet> dataSets = new ArrayList<>();
         //将数据加入dataSets
         dataSets.add(mTemperatureDataSet);
@@ -229,32 +166,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 接收温度数据的线程
+     * 温湿度数据接收线程
      */
-    private ServerSocket serverSocket;
-    private Socket client;
-
-    private class ShowTemperatureThread extends Thread {
+    private class ReceiveDataThread extends Thread {
         private DataInputStream in;
         private byte[] receive;
 
         @Override
         public void run() {
             try {
-                //在手机端建立一个ServerSocket，负责获取温度数据，端口为5000
+                //在手机端建立一个ServerSocket，负责接收ESP8266发送的数据，端口为5000
                 serverSocket = new ServerSocket(5000);
                 client = serverSocket.accept();
                 while (true) {
-                    //读取温度
+                    //循环读取数据
                     in = new DataInputStream(client.getInputStream());
                     receive = new byte[5];
                     in.read(receive);
-                    String temp = new String(receive);
-                    Message message = new Message();
-                    message.what = 0x01;
-                    message.obj = temp;
-                    mHandler.sendMessage(message);
-
+                    String data = new String(receive);
+                    //刷新UI
+                    doUIRrefresh(data);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -262,29 +193,117 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-
-        if (serverSocket != null) {
-            try {
-                serverSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+    /**
+     * 接收温湿度数据后刷新UI
+     *
+     * @param data 温湿度数据
+     */
+    private void doUIRrefresh(final String data) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                //将字符转换成16进制的字符串,共5个字节 xx xx xx xx xx
+                String hexData = str2HexStr(data);
+                //湿度整数部分,第一个字节
+                String humidityTemp = hexData.substring(0, 2);
+                //温度整数部分，第三个字节
+                String temperatureTemp = hexData.substring(4, 6);
+                //将16进制转换成10进制
+                int humidity = Character.digit(humidityTemp.charAt(0), 16) * 16
+                        + Character.digit(humidityTemp.charAt(1), 16);
+                int temperature = Character.digit(temperatureTemp.charAt(0), 16) * 16
+                        + Character.digit(temperatureTemp.charAt(1), 16);
+                mTemperatureTv.setText(temperature + "℃");
+                mHumidityTv.setText(humidity + "%");
+                //判断温度是否超出告警阈值
+                doCheckTemperatureAlert(temperature);
+                //判断湿度是否超出告警阈值
+                doCheckHumidityAlert(humidity);
+                //刷新图表
+                int entryCount = mTemperatureDataSet.getEntryCount();
+                if (entryCount < 8) {
+                    ++entryCount;
+                    int tempEntryCount = entryCount;
+                    mTemperatureDataSet.addEntry(new Entry(tempEntryCount, temperature));
+                    mHumidityDataSet.addEntry(new Entry(tempEntryCount, humidity));
+                } else {
+                    ++xIndex;
+                    int tempIndex = xIndex;
+                    mTemperatureDataSet.addEntry(new Entry(tempIndex, temperature));
+                    mTemperatureDataSet.removeFirst();
+                    mHumidityDataSet.addEntry(new Entry(tempIndex, humidity));
+                    mHumidityDataSet.removeFirst();
+                }
+                mLineData.notifyDataChanged();
+                mLineChart.notifyDataSetChanged();
+                mLineChart.invalidate();
             }
-        }
-        if (client != null) {
-            try {
-                client.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        //退出应用
-        finish();
+        });
     }
 
+    /**
+     * 检查温度告警
+     *
+     * @param temperature
+     */
+    private void doCheckTemperatureAlert(int temperature) {
+        //判断温度是否超出告警阈值
+        if (temperature > Integer.valueOf(mTempHigh)) {
+            mTemperatureAlert.setText("温度过高");
+            mTemperatureAlert.setTextColor(Color.RED);
+        } else if (temperature < Integer.valueOf(mTempLow)) {
+            mTemperatureAlert.setText("温度偏低");
+            mTemperatureAlert.setTextColor(Color.RED);
+        } else {
+            mTemperatureAlert.setText("温度正常");
+            mTemperatureAlert.setTextColor(Color.GREEN);
+        }
+    }
+
+    /**
+     * 检查湿度告警
+     *
+     * @param humidity
+     */
+    private void doCheckHumidityAlert(int humidity) {
+        if (humidity > Integer.valueOf(mHumidityHigh)) {
+            mHumidityAlert.setText("湿度过高");
+            mHumidityAlert.setTextColor(Color.RED);
+        } else if (humidity < Integer.valueOf(mHumidityLow)) {
+            mHumidityAlert.setText("湿度偏低");
+            mHumidityAlert.setTextColor(Color.RED);
+        } else {
+            mHumidityAlert.setText("湿度正常");
+            mHumidityAlert.setTextColor(Color.GREEN);
+        }
+    }
+
+    /**
+     * 获取从告警设置页面返回的值
+     *
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == Constants.ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
+            mTempHigh = data.getStringExtra(Constants.TEMP_HIGH_SETTING);
+            mTempLow = data.getStringExtra(Constants.TEMP_LOW_SETTING);
+            mHumidityHigh = data.getStringExtra(Constants.HUMIDITY_HIGH_SETTING);
+            mHumidityLow = data.getStringExtra(Constants.HUMIDITY_LOW_SETTING);
+            mTemperatureRangeTv.setText("(" + mTempLow + " - " + mTempHigh + "℃)");
+            mHumidityRangeTv.setText("(" + mHumidityLow + " - " + mHumidityHigh + "%)");
+        }
+    }
+
+    /**
+     * 创建菜单
+     *
+     * @param menu
+     * @return
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
@@ -299,18 +318,13 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case R.id.alert_settings:
-                Intent intent = new Intent(MainActivity.this, AlertSettingActivity.class);
-                intent.putExtra(Constants.TEMP_HIGH_SETTING, mTempHigh);
-                intent.putExtra(Constants.TEMP_LOW_SETTING, mTempLow);
-                intent.putExtra(Constants.HUMIDITY_HIGH_SETTING, mHumidityHigh);
-                intent.putExtra(Constants.HUMIDITY_LOW_SETTING, mHumidityLow);
-                startActivityForResult(intent, ACTIVITY_REQUEST_CODE);
-                break;
-
-
+        if (item.getItemId() == R.id.alert_settings) {
+            Intent intent = new Intent(MainActivity.this, AlertSettingActivity.class);
+            intent.putExtra(Constants.TEMP_HIGH_SETTING, mTempHigh);
+            intent.putExtra(Constants.TEMP_LOW_SETTING, mTempLow);
+            intent.putExtra(Constants.HUMIDITY_HIGH_SETTING, mHumidityHigh);
+            intent.putExtra(Constants.HUMIDITY_LOW_SETTING, mHumidityLow);
+            startActivityForResult(intent, Constants.ACTIVITY_REQUEST_CODE);
         }
         return true;
     }
@@ -321,13 +335,13 @@ public class MainActivity extends AppCompatActivity {
      * @param origin
      * @return
      */
-    public static String str2HexStr(String origin) {
+    private static String str2HexStr(String origin) {
         byte[] bytes = origin.getBytes();
         return bytesToHexString(bytes);
     }
 
     private static String bytesToHexString(byte[] src) {
-        StringBuilder stringBuilder = new StringBuilder("");
+        StringBuilder stringBuilder = new StringBuilder();
         if (src == null || src.length <= 0) {
             return null;
         }
@@ -340,6 +354,22 @@ public class MainActivity extends AppCompatActivity {
             stringBuilder.append(hv);
         }
         return stringBuilder.toString();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        try {
+            if (serverSocket != null) {
+                serverSocket.close();
+            }
+            if (client != null) {
+                client.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        finish();
     }
 
 
